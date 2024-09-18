@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>ESP32 WebSocket Server</title>
+    <style>
+      html {
+        font-family: Helvetica;
+        display: inline-block;
+        margin: 0px auto;
+        text-align: center;
+      }
+      body {
+        margin-top: 50px;
+      }
+      h1 {
+        color: #444444;
+        margin: 50px auto;
+      }
+      p {
+        font-size: 19px;
+        color: #888;
+      }
+      #state1,
+      #state2 {
+        font-weight: bold;
+        color: #444;
+      }
+      .switch {
+        margin: 25px auto;
+        width: 80px;
+      }
+      .toggle {
+        display: none;
+      }
+      .toggle + label {
+        display: block;
+        position: relative;
+        cursor: pointer;
+        outline: 0;
+        user-select: none;
+        padding: 2px;
+        width: 80px;
+        height: 40px;
+        background-color: #ddd;
+        border-radius: 40px;
+      }
+      .toggle + label:before,
+      .toggle + label:after {
+        display: block;
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        bottom: 1px;
+        content: "";
+      }
+      .toggle + label:before {
+        right: 1px;
+        background-color: #f1f1f1;
+        border-radius: 40px;
+        transition: background 0.4s;
+      }
+      .toggle + label:after {
+        width: 40px;
+        background-color: #fff;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        transition: margin 0.4s;
+      }
+      .toggle:checked + label:before {
+        background-color: #4285f4;
+      }
+      .toggle:checked + label:after {
+        margin-left: 42px;
+      }
+      button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ESP32 WebSocket Server</h1>
+    <div class="switch">
+      <input id="toggle-btn1" class="toggle" type="checkbox" %CHECK1% />
+      <label for="toggle-btn1"></label>
+    </div>
+    <p>Switch 1: <span id="state1">%STATE1%</span></p>
+
+    <div class="switch">
+      <input id="toggle-btn2" class="toggle" type="checkbox" %CHECK2% />
+      <label for="toggle-btn2"></label>
+    </div>
+    <p>Switch 2: <span id="state2">%STATE2%</span></p>
+
+    <button id="enroll-btn">Enroll</button>
+    <button id="attendance-btn">Attendance</button>
+    <button id="print-btn">Print Persons</button>
+
+    <script>
+      window.addEventListener("load", function () {
+        var websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
+        websocket.onopen = function (event) {
+          console.log("Connection established");
+        };
+        websocket.onclose = function (event) {
+          console.log("Connection died");
+        };
+        websocket.onerror = function (error) {
+          console.log("error");
+        };
+        websocket.onmessage = function (event) {
+          var data = JSON.parse(event.data);
+          if (data.switch1 == "1") {
+            document.getElementById("state1").innerHTML = "ON";
+            document.getElementById("toggle-btn1").checked = true;
+          } else {
+            document.getElementById("state1").innerHTML = "OFF";
+            document.getElementById("toggle-btn1").checked = false;
+          }
+          if (data.switch2 == "1") {
+            document.getElementById("state2").innerHTML = "ON";
+            document.getElementById("toggle-btn2").checked = true;
+          } else {
+            document.getElementById("state2").innerHTML = "OFF";
+            document.getElementById("toggle-btn2").checked = false;
+          }
+        };
+
+        document
+          .getElementById("enroll-btn")
+          .addEventListener("click", function () {
+            websocket.send("enroll");
+          });
+
+        document
+          .getElementById("attendance-btn")
+          .addEventListener("click", function () {
+            websocket.send("attendance");
+          });
+
+        document
+          .getElementById("print-btn")
+          .addEventListener("click", function () {
+            websocket.send("print");
+          });
+      });
+    </script>
+  </body>
+</html>

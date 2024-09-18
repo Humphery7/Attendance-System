@@ -1,0 +1,1063 @@
+<!-- <!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>ESP32 WebSocket Server</title>
+    <style>
+      html {
+        font-family: Helvetica;
+        display: inline-block;
+        margin: 0px auto;
+        text-align: center;
+      }
+      body {
+        margin-top: 50px;
+      }
+      h1 {
+        color: #444444;
+        margin: 50px auto;
+      }
+      p {
+        font-size: 19px;
+        color: #888;
+      }
+      #state1,
+      #state2 {
+        font-weight: bold;
+        color: #444;
+      }
+      .switch {
+        margin: 25px auto;
+        width: 80px;
+      }
+      .toggle {
+        display: none;
+      }
+      .toggle + label {
+        display: block;
+        position: relative;
+        cursor: pointer;
+        outline: 0;
+        user-select: none;
+        padding: 2px;
+        width: 80px;
+        height: 40px;
+        background-color: #ddd;
+        border-radius: 40px;
+      }
+      .toggle + label:before,
+      .toggle + label:after {
+        display: block;
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        bottom: 1px;
+        content: "";
+      }
+      .toggle + label:before {
+        right: 1px;
+        background-color: #f1f1f1;
+        border-radius: 40px;
+        transition: background 0.4s;
+      }
+      .toggle + label:after {
+        width: 40px;
+        background-color: #fff;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        transition: margin 0.4s;
+      }
+      .toggle:checked + label:before {
+        background-color: #4285f4;
+      }
+      .toggle:checked + label:after {
+        margin-left: 42px;
+      }
+      button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ESP32 WebSocket Server</h1>
+    <div class="switch">
+      <input id="toggle-btn1" class="toggle" type="checkbox" %CHECK1% />
+      <label for="toggle-btn1"></label>
+    </div>
+    <p>Switch 1: <span id="state1">%STATE1%</span></p>
+
+    <div class="switch">
+      <input id="toggle-btn2" class="toggle" type="checkbox" %CHECK2% />
+      <label for="toggle-btn2"></label>
+    </div>
+    <p>Switch 2: <span id="state2">%STATE2%</span></p>
+
+    <button id="enroll-btn">Enroll</button>
+    <button id="attendance-btn">Attendance</button>
+    <button id="print-btn">Print Persons</button>
+
+    <script>
+      window.addEventListener("load", function () {
+        var websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
+        websocket.onopen = function (event) {
+          console.log("Connection established");
+        };
+        websocket.onclose = function (event) {
+          console.log("Connection died");
+        };
+        websocket.onerror = function (error) {
+          console.log("error");
+        };
+        websocket.onmessage = function (event) {
+          var data = JSON.parse(event.data);
+          if (data.switch1 == "1") {
+            document.getElementById("state1").innerHTML = "ON";
+            document.getElementById("toggle-btn1").checked = true;
+          } else {
+            document.getElementById("state1").innerHTML = "OFF";
+            document.getElementById("toggle-btn1").checked = false;
+          }
+          if (data.switch2 == "1") {
+            document.getElementById("state2").innerHTML = "ON";
+            document.getElementById("toggle-btn2").checked = true;
+          } else {
+            document.getElementById("state2").innerHTML = "OFF";
+            document.getElementById("toggle-btn2").checked = false;
+          }
+        };
+
+        document
+          .getElementById("enroll-btn")
+          .addEventListener("click", function () {
+            websocket.send("enroll");
+          });
+
+        document
+          .getElementById("attendance-btn")
+          .addEventListener("click", function () {
+            websocket.send("attendance");
+          });
+
+        document
+          .getElementById("print-btn")
+          .addEventListener("click", function () {
+            websocket.send("print");
+          });
+      });
+    </script>
+  </body>
+</html> -->
+
+<!-- <!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>ESP32 WebSocket Server</title>
+    <style>
+      html {
+        font-family: Helvetica;
+        display: inline-block;
+        margin: 0px auto;
+        text-align: center;
+      }
+      body {
+        margin-top: 50px;
+      }
+      h1 {
+        color: #444444;
+        margin: 50px auto;
+      }
+      p {
+        font-size: 19px;
+        color: #888;
+      }
+      #state1,
+      #state2 {
+        font-weight: bold;
+        color: #444;
+      }
+      .switch {
+        margin: 25px auto;
+        width: 80px;
+      }
+      .toggle {
+        display: none;
+      }
+      .toggle + label {
+        display: block;
+        position: relative;
+        cursor: pointer;
+        outline: 0;
+        user-select: none;
+        padding: 2px;
+        width: 80px;
+        height: 40px;
+        background-color: #ddd;
+        border-radius: 40px;
+      }
+      .toggle + label:before,
+      .toggle + label:after {
+        display: block;
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        bottom: 1px;
+        content: "";
+      }
+      .toggle + label:before {
+        right: 1px;
+        background-color: #f1f1f1;
+        border-radius: 40px;
+        transition: background 0.4s;
+      }
+      .toggle + label:after {
+        width: 40px;
+        background-color: #fff;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        transition: margin 0.4s;
+      }
+      .toggle:checked + label:before {
+        background-color: #4285f4;
+      }
+      .toggle:checked + label:after {
+        margin-left: 42px;
+      }
+      button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+      #persons-data {
+        margin: 20px auto;
+        padding: 10px;
+        width: 80%;
+        text-align: left;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ESP32 WebSocket Server</h1>
+    <div class="switch">
+      <input id="toggle-btn1" class="toggle" type="checkbox" %CHECK1% />
+      <label for="toggle-btn1"></label>
+    </div>
+    <p>Switch 1: <span id="state1">%STATE1%</span></p>
+
+    <div class="switch">
+      <input id="toggle-btn2" class="toggle" type="checkbox" %CHECK2% />
+      <label for="toggle-btn2"></label>
+    </div>
+    <p>Switch 2: <span id="state2">%STATE2%</span></p>
+
+    <button id="enroll-btn">Enroll</button>
+    <button id="attendance-btn">Attendance</button>
+    <button id="print-btn">Print Persons</button>
+
+    <div id="persons-data">
+      <h2>Persons Data:</h2>
+      <pre id="data-display"></pre>
+    </div>
+
+    <script>
+      window.addEventListener("load", function () {
+        var websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
+        websocket.onopen = function (event) {
+          console.log("Connection established");
+        };
+        websocket.onclose = function (event) {
+          console.log("Connection died");
+        };
+        websocket.onerror = function (error) {
+          console.log("error");
+        };
+        websocket.onmessage = function (event) {
+          try {
+            var data = JSON.parse(event.data);
+
+            // Handle switch states if needed
+            if (data.switch1 !== undefined) {
+              if (data.switch1 == "1") {
+                document.getElementById("state1").innerHTML = "ON";
+                document.getElementById("toggle-btn1").checked = true;
+              } else {
+                document.getElementById("state1").innerHTML = "OFF";
+                document.getElementById("toggle-btn1").checked = false;
+              }
+            }
+
+            if (data.switch2 !== undefined) {
+              if (data.switch2 == "1") {
+                document.getElementById("state2").innerHTML = "ON";
+                document.getElementById("toggle-btn2").checked = true;
+              } else {
+                document.getElementById("state2").innerHTML = "OFF";
+                document.getElementById("toggle-btn2").checked = false;
+              }
+            }
+
+            // Handle persons data
+            if (Array.isArray(data)) {
+              var display = document.getElementById("data-display");
+              display.innerHTML = JSON.stringify(data, null, 2);
+            }
+          } catch (e) {
+            console.error("Error parsing message:", e);
+          }
+        };
+
+        document
+          .getElementById("enroll-btn")
+          .addEventListener("click", function () {
+            websocket.send("enroll");
+          });
+
+        document
+          .getElementById("attendance-btn")
+          .addEventListener("click", function () {
+            websocket.send("attendance");
+          });
+
+        document
+          .getElementById("print-btn")
+          .addEventListener("click", function () {
+            websocket.send("print");
+          });
+      });
+    </script>
+  </body>
+</html> -->
+
+<!-- <!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>ESP32 WebSocket Server</title>
+    <style>
+      html {
+        font-family: Helvetica;
+        display: inline-block;
+        margin: 0px auto;
+        text-align: center;
+      }
+      body {
+        margin-top: 50px;
+      }
+      h1 {
+        color: #444444;
+        margin: 50px auto;
+      }
+      p {
+        font-size: 19px;
+        color: #888;
+      }
+      button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+      #persons-data {
+        margin: 20px auto;
+        padding: 10px;
+        width: 80%;
+        text-align: left;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ESP32 WebSocket Server</h1>
+
+    <input type="text" id="name-input" placeholder="Enter name" />
+    <button id="set-name-btn">Set Name</button>
+
+    <button id="enroll-btn">Enroll</button>
+    <button id="attendance-btn">Attendance</button>
+    <button id="print-btn">Print Persons</button>
+
+    <div id="persons-data">
+      <h2>Persons Data:</h2>
+      <pre id="data-display"></pre>
+    </div>
+
+    <script>
+      window.addEventListener("load", function () {
+        var websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
+
+        websocket.onopen = function (event) {
+          console.log("Connection established");
+        };
+
+        websocket.onclose = function (event) {
+          console.log("Connection died");
+        };
+
+        websocket.onerror = function (error) {
+          console.log("Error:", error);
+        };
+
+        websocket.onmessage = function (event) {
+          try {
+            var data = JSON.parse(event.data);
+            // Handle persons data
+            if (Array.isArray(data)) {
+              var display = document.getElementById("data-display");
+              display.innerHTML = JSON.stringify(data, null, 2);
+            }
+          } catch (e) {
+            console.error("Error parsing message:", e);
+          }
+        };
+
+        document
+          .getElementById("set-name-btn")
+          .addEventListener("click", function () {
+            var name = document.getElementById("name-input").value;
+            if (name.trim() !== "") {
+              websocket.send(JSON.stringify({ type: "setName", name: name }));
+            } else {
+              alert("Please enter a name.");
+            }
+          });
+
+        document
+          .getElementById("enroll-btn")
+          .addEventListener("click", function () {
+            websocket.send("enroll");
+          });
+
+        document
+          .getElementById("attendance-btn")
+          .addEventListener("click", function () {
+            websocket.send("attendance");
+          });
+
+        document
+          .getElementById("print-btn")
+          .addEventListener("click", function () {
+            websocket.send("print");
+          });
+      });
+    </script>
+  </body>
+</html> -->
+
+<!-- <!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>ESP32 WebSocket Server</title>
+    <style>
+      html {
+        font-family: Helvetica;
+        display: inline-block;
+        margin: 0px auto;
+        text-align: center;
+      }
+      body {
+        margin-top: 50px;
+      }
+      h1 {
+        color: #444444;
+        margin: 50px auto;
+      }
+      p {
+        font-size: 19px;
+        color: #888;
+      }
+      button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+      #persons-data {
+        margin: 20px auto;
+        padding: 10px;
+        width: 80%;
+        text-align: left;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ESP32 WebSocket Server</h1>
+
+    <input type="text" id="name-input" placeholder="Enter name" />
+    <button id="set-name-btn">Set Name</button>
+
+    <button id="enroll-btn">Enroll</button>
+    <button id="attendance-btn">Attendance</button>
+    <button id="print-btn">Print Persons</button>
+    <button id="download-btn">Download Data</button>
+
+    <div id="persons-data">
+      <h2>Persons Data:</h2>
+      <pre id="data-display"></pre>
+    </div>
+
+    <script>
+      window.addEventListener("load", function () {
+        var websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
+
+        websocket.onopen = function (event) {
+          console.log("Connection established");
+        };
+
+        websocket.onclose = function (event) {
+          console.log("Connection died");
+        };
+
+        websocket.onerror = function (error) {
+          console.log("Error:", error);
+        };
+
+        websocket.onmessage = function (event) {
+          try {
+            var data = JSON.parse(event.data);
+            // Handle persons data
+            if (Array.isArray(data)) {
+              var display = document.getElementById("data-display");
+              display.innerHTML = JSON.stringify(data, null, 2);
+            }
+          } catch (e) {
+            console.error("Error parsing message:", e);
+          }
+        };
+
+        document
+          .getElementById("set-name-btn")
+          .addEventListener("click", function () {
+            var name = document.getElementById("name-input").value;
+            if (name.trim() !== "") {
+              websocket.send(JSON.stringify({ type: "setName", name: name }));
+            } else {
+              alert("Please enter a name.");
+            }
+          });
+
+        document
+          .getElementById("enroll-btn")
+          .addEventListener("click", function () {
+            websocket.send("enroll");
+          });
+
+        document
+          .getElementById("attendance-btn")
+          .addEventListener("click", function () {
+            websocket.send("attendance");
+          });
+
+        document
+          .getElementById("print-btn")
+          .addEventListener("click", function () {
+            websocket.send("print");
+          });
+      });
+
+      // Function to download data as JSON file
+      function downloadData() {
+        var display = document.getElementById("data-display");
+        var dataStr = display.textContent;
+        if (dataStr.trim().length > 0) {
+          var dataUri =
+            "data:application/json;charset=utf-8," +
+            encodeURIComponent(dataStr);
+
+          var link = document.createElement("a");
+          link.href = dataUri;
+          link.download = "persons_data.json";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          alert("No data to download.");
+        }
+      }
+
+      // Event listener for download button
+      document
+        .getElementById("download-btn")
+        .addEventListener("click", downloadData);
+    </script>
+  </body>
+</html> -->
+
+<!-- <!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>RFID Biometric Attendance System</title>
+    <style>
+      html {
+        font-family: Helvetica;
+        display: inline-block;
+        margin: 0px auto;
+        text-align: center;
+      }
+      body {
+        margin-top: 50px;
+      }
+      h1 {
+        color: #444444;
+        margin: 50px auto;
+      }
+      p {
+        font-size: 19px;
+        color: #888;
+      }
+      button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+      #persons-data {
+        margin: 20px auto;
+        padding: 10px;
+        width: 80%;
+        text-align: left;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>RFID Biometric Attendance System</h1>
+
+    <input type="text" id="name-input" placeholder="Enter name" />
+    <button id="set-name-btn">Set Name</button>
+
+    <button id="enroll-btn">Enroll Persons</button>
+    <button id="attendance-btn">Attendance</button>
+    <button id="print-btn">Print Attendance</button>
+    <button id="download-txt-btn">Download Attendance Data as Text</button>
+    <button id="download-pdf-btn">Download Attendance Data as PDF</button>
+
+    <div id="persons-data">
+      <h2>Persons Data:</h2>
+      <pre id="data-display"></pre>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+      window.addEventListener("load", function () {
+        var websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
+
+        websocket.onopen = function (event) {
+          console.log("Connection established");
+        };
+
+        websocket.onclose = function (event) {
+          console.log("Connection died");
+        };
+
+        websocket.onerror = function (error) {
+          console.log("Error:", error);
+        };
+
+        websocket.onmessage = function (event) {
+          try {
+            var data = JSON.parse(event.data);
+            // Handle persons data
+            if (Array.isArray(data)) {
+              var display = document.getElementById("data-display");
+              display.innerHTML = JSON.stringify(data, null, 2);
+            }
+          } catch (e) {
+            console.error("Error parsing message:", e);
+          }
+        };
+
+        document
+          .getElementById("set-name-btn")
+          .addEventListener("click", function () {
+            var name = document.getElementById("name-input").value;
+            if (name.trim() !== "") {
+              websocket.send(JSON.stringify({ type: "setName", name: name }));
+            } else {
+              alert("Please enter a name.");
+            }
+          });
+
+        document
+          .getElementById("enroll-btn")
+          .addEventListener("click", function () {
+            websocket.send("enroll");
+          });
+
+        document
+          .getElementById("attendance-btn")
+          .addEventListener("click", function () {
+            websocket.send("attendance");
+          });
+
+        document
+          .getElementById("print-btn")
+          .addEventListener("click", function () {
+            websocket.send("print");
+          });
+      });
+
+      // Function to download data as Text file
+      function downloadAsText() {
+        var display = document.getElementById("data-display");
+        var dataStr = display.textContent;
+        if (dataStr.trim().length > 0) {
+          var dataUri =
+            "data:text/plain;charset=utf-8," + encodeURIComponent(dataStr);
+
+          var link = document.createElement("a");
+          link.href = dataUri;
+          link.download = "persons_data.txt";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          alert("No data to download.");
+        }
+      }
+
+      // Function to download data as PDF file
+      function downloadAsPDF() {
+        var display = document.getElementById("data-display");
+        var dataStr = display.textContent;
+        if (dataStr.trim().length > 0) {
+          const { jsPDF } = window.jspdf;
+          var doc = new jsPDF();
+
+          doc.text(dataStr, 10, 10);
+          doc.save("persons_data.pdf");
+        } else {
+          alert("No data to download.");
+        }
+      }
+
+      // Event listeners for download buttons
+      document
+        .getElementById("download-txt-btn")
+        .addEventListener("click", downloadAsText);
+      document
+        .getElementById("download-pdf-btn")
+        .addEventListener("click", downloadAsPDF);
+    </script>
+  </body>
+</html> -->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>RFID Biometric Attendance System</title>
+    <style>
+      html {
+        font-family: Helvetica;
+        display: inline-block;
+        margin: 0px auto;
+        text-align: center;
+      }
+      body {
+        margin-top: 50px;
+      }
+      h1 {
+        color: #444444;
+        margin: 50px auto;
+      }
+      p {
+        font-size: 19px;
+        color: #888;
+      }
+      button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+      #persons-data {
+        margin: 20px auto;
+        padding: 10px;
+        width: 80%;
+        text-align: left;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>RFID Biometric Attendance System</h1>
+
+    <input type="text" id="name-input" placeholder="Enter name" />
+    <button id="set-name-btn">Set Name</button>
+    <label for="input-type">Select Type:</label>
+    <select id="input-type">
+      <option value="course">Course Code</option>
+      <option value="fingerprint">Fingerprint ID</option>
+    </select>
+    <input type="text" id="course-input" placeholder="Enter Value" />
+    <button id="set-course-btn">Set Value</button>
+
+    <button id="enroll-btn">Enroll</button>
+    <button id="attendance-btn">Take Attendance</button>
+    <button id="print-btn">Print Attendance</button>
+    <button id="download-txt-btn">Download Attendance as Text</button>
+    <!-- <button id="download-pdf-btn">Download as PDF</button> -->
+    <button id="download-csv-btn">Download Attendance as CSV</button>
+    <!--added this now-->
+    <button id="wipe-data-btn">Wipe Data</button>
+
+    <!--added this now-->
+    <div
+      id="message-box"
+      style="
+        position: fixed;
+        top: 150px;
+        right: 10px;
+        width: 200px;
+        height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: white;
+        padding: 10px;
+        font-size: 14px;
+        display: flex;
+        flex-direction: column;
+      "
+    >
+      <h3 style="margin-top: 0; margin-bottom: 10px">Messages:</h3>
+      <pre
+        id="message-display"
+        style="
+          flex-grow: 1;
+          overflow-y: auto;
+          white-space: pre-wrap;
+          word-wrap: break-word;
+        "
+      ></pre>
+    </div>
+    <!--added this now-->
+
+    <div id="persons-data">
+      <h2>Persons Data:</h2>
+      <pre id="data-display"></pre>
+    </div>
+
+    <!--added elseif part now-->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> -->
+    <script>
+      window.addEventListener("load", function () {
+        var websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
+
+        websocket.onopen = function (event) {
+          console.log("Connection established");
+        };
+
+        websocket.onclose = function (event) {
+          console.log("Connection died");
+        };
+
+        websocket.onerror = function (error) {
+          console.log("Error:", error);
+        };
+
+        websocket.onmessage = function (event) {
+          try {
+            var data = JSON.parse(event.data);
+            // Handle persons data
+            if (Array.isArray(data)) {
+              var display = document.getElementById("data-display");
+              display.innerHTML = JSON.stringify(data, null, 2);
+            } else if (data.type === "message") {
+              var messageDisplay = document.getElementById("message-display");
+              // Clear previous messages
+              messageDisplay.innerHTML = "";
+              messageDisplay.innerHTML += data.message + "<br>";
+              messageDisplay.scrollTop = messageDisplay.scrollHeight;
+            }
+          } catch (e) {
+            console.error("Error parsing message:", e);
+          }
+        };
+
+        document
+          .getElementById("set-name-btn")
+          .addEventListener("click", function () {
+            var name = document.getElementById("name-input").value;
+            if (name.trim() !== "") {
+              websocket.send(JSON.stringify({ type: "setName", name: name }));
+            } else {
+              alert("Please enter a name.");
+            }
+          });
+
+        document
+          .getElementById("set-course-btn")
+          .addEventListener("click", function () {
+            var course = document.getElementById("course-input").value;
+            var inputType = document.getElementById("input-type").value;
+
+            if (course.trim() !== "") {
+              if (inputType === "course") {
+                websocket.send(
+                  JSON.stringify({ type: "setCourse", course: course })
+                );
+              } else if (inputType === "fingerprint") {
+                websocket.send(
+                  JSON.stringify({ type: "setFingerprintID", id: course })
+                );
+              }
+              //websocket.send(
+              //JSON.stringify({ type: "setCourse", course: course })
+              //);
+            } else {
+              alert("Please enter a Value.");
+            }
+          });
+
+        document
+          .getElementById("enroll-btn")
+          .addEventListener("click", function () {
+            websocket.send("enroll");
+          });
+
+        document
+          .getElementById("attendance-btn")
+          .addEventListener("click", function () {
+            websocket.send("attendance");
+          });
+
+        //added this now
+        document
+          .getElementById("wipe-data-btn")
+          .addEventListener("click", function () {
+            websocket.send("wipe");
+          });
+        //added this now
+
+        document
+          .getElementById("print-btn")
+          .addEventListener("click", function () {
+            websocket.send("print");
+          });
+      });
+
+      // Function to download data as Text file
+      function downloadAsText() {
+        var display = document.getElementById("data-display");
+        var dataStr = display.textContent;
+        if (dataStr.trim().length > 0) {
+          var dataUri =
+            "data:text/plain;charset=utf-8," + encodeURIComponent(dataStr);
+
+          var link = document.createElement("a");
+          link.href = dataUri;
+          link.download = "persons_data.txt";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          alert("No data to download.");
+        }
+      }
+
+      // Function to download data as PDF file
+      // function downloadAsPDF() {
+      //   var display = document.getElementById("data-display");
+      //   var dataStr = display.textContent;
+      //   if (dataStr.trim().length > 0) {
+      //     const { jsPDF } = window.jspdf;
+      //     var doc = new jsPDF();
+
+      //     doc.text(dataStr, 10, 10);
+      //     doc.save("persons_data.pdf");
+      //   } else {
+      //     alert("No data to download.");
+      //   }
+      // }
+
+      // Function to download data as CSV file
+      function downloadAsCSV() {
+        var display = document.getElementById("data-display");
+        var dataStr = display.textContent;
+        if (dataStr.trim().length > 0) {
+          var dataObj = JSON.parse(dataStr);
+          var csvStr = convertToCSV(dataObj);
+
+          var dataUri =
+            "data:text/csv;charset=utf-8," + encodeURIComponent(csvStr);
+
+          var link = document.createElement("a");
+          link.href = dataUri;
+          link.download = "persons_data.csv";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          alert("No data to download.");
+        }
+      }
+
+      // Function to convert JSON data to CSV
+      function convertToCSV(objArray) {
+        var array =
+          typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+        var str = "";
+        var line = "";
+
+        // Add headers
+        var headers = Object.keys(array[0]);
+        line = headers.join(",");
+        str += line + "\r\n";
+
+        // Add rows
+        for (var i = 0; i < array.length; i++) {
+          var line = "";
+          for (var index in array[i]) {
+            if (line != "") line += ",";
+            line += array[i][index];
+          }
+          str += line + "\r\n";
+        }
+        return str;
+      }
+
+      // Event listeners for download buttons
+      document
+        .getElementById("download-txt-btn")
+        .addEventListener("click", downloadAsText);
+      // document
+      //   .getElementById("download-pdf-btn")
+      //   .addEventListener("click", downloadAsPDF);
+      document
+        .getElementById("download-csv-btn")
+        .addEventListener("click", downloadAsCSV);
+    </script>
+  </body>
+</html>

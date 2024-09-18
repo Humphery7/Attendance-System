@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>ESP32 Control</title>
+    <style>
+      /* Add some basic styling */
+      body {
+        font-family: Arial, sans-serif;
+      }
+      button {
+        margin: 5px;
+        padding: 10px;
+      }
+      input {
+        margin: 5px;
+        padding: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ESP32 Control Panel</h1>
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" /><br />
+    <button onclick="enrollRFID()">Enroll RFID Tag</button>
+    <button onclick="enrollFingerprint()">Enroll Fingerprint</button>
+    <button onclick="takeAttendance()">Take Attendance</button>
+    <div id="status"></div>
+    <script>
+      function enrollRFID() {
+        let name = document.getElementById("name").value;
+        fetch(`/enrollRFID?name=${name}`)
+          .then((response) => response.text())
+          .then((data) => (document.getElementById("status").innerText = data));
+      }
+
+      function enrollFingerprint() {
+        let name = document.getElementById("name").value;
+        fetch(`/enrollFingerprint?name=${name}`)
+          .then((response) => response.text())
+          .then((data) => (document.getElementById("status").innerText = data));
+      }
+
+      function takeAttendance() {
+        fetch(`/takeAttendance`)
+          .then((response) => response.text())
+          .then((data) => (document.getElementById("status").innerText = data));
+      }
+    </script>
+  </body>
+</html>

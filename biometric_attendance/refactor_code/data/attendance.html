@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RFID Biometric System - Attendance</title>
+    <style>
+      :root {
+        --primary-color: #9b59b6;
+        --secondary-color: #f1c40f;
+        --background-color: #ecf0f1;
+        --text-color: #34495e;
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-color);
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      h1,
+      h2 {
+        color: var(--primary-color);
+        text-align: center;
+      }
+
+      button {
+        background-color: var(--secondary-color);
+        color: var(--text-color);
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+        margin: 10px 5px;
+      }
+
+      button:hover {
+        background-color: #f39c12;
+      }
+
+      #persons-data {
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 20px;
+        margin-top: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      #data-display {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      #message-box {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 250px;
+        height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: white;
+        padding: 10px;
+        font-size: 14px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      #message-display {
+        margin: 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .navigation {
+        text-align: center;
+        margin-top: 30px;
+      }
+
+      .navigation a {
+        display: inline-block;
+        background-color: var(--primary-color);
+        color: white;
+        text-decoration: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+      }
+
+      .navigation a:hover {
+        background-color: #8e44ad;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>RFID Biometric Attendance System</h1>
+
+      <div class="form-group">
+        <label for="course-input">Course Code:</label>
+        <input type="text" id="course-input" placeholder="Enter Course Code" />
+      </div>
+      <button id="set-course-btn">Set Course Code</button>
+
+      <button id="attendance-btn">Take Attendance</button>
+      <button id="print-btn">Print Attendance</button>
+      <button id="download-txt-btn">Download as Text</button>
+      <button id="download-csv-btn">Download as CSV</button>
+
+      <div id="persons-data">
+        <h2>Attendance Data:</h2>
+        <pre id="data-display"></pre>
+      </div>
+
+      <div class="navigation">
+        <a href="/">Go to Enrollment Page</a>
+      </div>
+    </div>
+
+    <div id="message-box">
+      <h3>Messages:</h3>
+      <pre id="message-display"></pre>
+    </div>
+
+    <script>
+      window.addEventListener("load", function () {
+        var websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
+
+        websocket.onopen = function (event) {
+          console.log("Connection established");
+        };
+
+        websocket.onclose = function (event) {
+          console.log("Connection closed");
+        };
+
+        websocket.onerror = function (error) {
+          console.log("Error:", error);
+        };
+
+        websocket.onmessage = function (event) {
+          try {
+            var data = JSON.parse(event.data);
+            if (Array.isArray(data)) {
+              var display = document.getElementById("data-display");
+              display.innerHTML = JSON.stringify(data, null, 2);
+            } else if (data.type === "message") {
+              var messageDisplay = document.getElementById("message-display");
+              messageDisplay.innerHTML = "";
+              messageDisplay.innerHTML += data.message + "<br>";
+              messageDisplay.scrollTop = messageDisplay.scrollHeight;
+            }
+          } catch (e) {
+            console.error("Error parsing message:", e);
+          }
+        };
+
+        document
+          .getElementById("set-course-btn")
+          .addEventListener("click", function () {
+            var courseCode = document.getElementById("course-input").value;
+            if (courseCode.trim() !== "") {
+              websocket.send(
+                JSON.stringify({ type: "setCourse", course: courseCode })
+              );
+            } else {
+              alert("Please enter a Course Code.");
+            }
+          });
+
+        document
+          .getElementById("attendance-btn")
+          .addEventListener("click", function () {
+            websocket.send("attendance");
+          });
+
+        document
+          .getElementById("print-btn")
+          .addEventListener("click", function () {
+            websocket.send("print");
+          });
+
+        document
+          .getElementById("download-txt-btn")
+          .addEventListener("click", downloadAsText);
+        document
+          .getElementById("download-csv-btn")
+          .addEventListener("click", downloadAsCSV);
+      });
+
+      function downloadAsText() {
+        var display = document.getElementById("data-display");
+        var dataStr = display.textContent;
+        if (dataStr.trim().length > 0) {
+          var dataUri =
+            "data:text/plain;charset=utf-8," + encodeURIComponent(dataStr);
+          var link = document.createElement("a");
+          link.href = dataUri;
+          link.download = "attendance_data.txt";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          alert("No data to download.");
+        }
+      }
+
+      function downloadAsCSV() {
+        var display = document.getElementById("data-display");
+        var dataStr = display.textContent;
+        if (dataStr.trim().length > 0) {
+          var dataObj = JSON.parse(dataStr);
+          var csvStr = convertToCSV(dataObj);
+          var dataUri =
+            "data:text/csv;charset=utf-8," + encodeURIComponent(csvStr);
+          var link = document.createElement("a");
+          link.href = dataUri;
+          link.download = "attendance_data.csv";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          alert("No data to download.");
+        }
+      }
+
+      function convertToCSV(objArray) {
+        var array =
+          typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+        var str = "";
+        var line = "";
+
+        // Add headers
+        var headers = Object.keys(array[0]);
+        line = headers.join(",");
+        str += line + "\r\n";
+
+        // Add rows
+        for (var i = 0; i < array.length; i++) {
+          var line = "";
+          for (var index in array[i]) {
+            if (line != "") line += ",";
+            line += array[i][index];
+          }
+          str += line + "\r\n";
+        }
+        return str;
+      }
+    </script>
+  </body>
+</html>
