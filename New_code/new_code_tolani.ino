@@ -9,6 +9,12 @@
 #include <ArduinoJson.h>
 #include <Adafruit_Fingerprint.h>
 
+
+#include <WiFiUdp.h>
+#include <NTPClient.h>
+#include <TimeLib.h>
+
+
 HardwareSerial serialPort(2); // use UART2
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&serialPort);
 uint8_t id;
@@ -17,26 +23,34 @@ uint8_t getFingerprintID();
 #define SS_PIN  5  // ESP32 pin GPIO5 
 #define RST_PIN 27 // ESP32 pin GPIO27 
 
+#define led_success 13
+
+String formattedDate;
+String timeStamp;
+
+
 // byte readCard[4];
 // Replace with your network credentials
-const char* ssid = "Feys' Samsung Galaxy";//"Umidigi A3_Pro" ;//"DESKTOP-AO4A53G 9889";//;//"DESKTOP-AO4A53G 9889";
-const char* password = "123456789";//"maxkkott2018";//"83s9$60Z";//// //"83s9$60Z";
+const char* ssid = "Feys' Samsung Galaxy";
+const char* password = "123456789";
 
 String currentCourse = "";
 String currentName = "";
 String tagID = "";
 String tagCheck = "";
 int fingerIDCheck;
-
+String lastSentMessage = "";
 // Create instances
 MFRC522 rfid(SS_PIN, RST_PIN);
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
+
 bool stateEnroll = false;
 bool stateAttendance = false;
 uint8_t fingerprint_store;
+
 
 struct Person {
     String name;
@@ -44,14 +58,45 @@ struct Person {
     String uid;
     uint8_t fingerprint;
     int attendance;
+    String status;
+    String time;
 };
- 
+
+
+
+enum MainState {
+  IDLE,
+  ENROLL,
+  ATTENDANCE,
+};
+
+enum EnrollSubState {
+  ENROLL_INIT,
+  ENROLL_WAITING_RFID,
+  ENROLL_WAITING_FINGERPRINT,
+  ENROLL_PROCESSING
+};
+
+enum AttendanceSubState {
+  ATTENDANCE_INIT,
+  ATTENDANCE_WAITING_RFID,
+  ATTENDANCE_WAITING_FINGERPRINT,
+  ATTENDANCE_PROCESSING
+};
+
+MainState currentMainState = IDLE;
+EnrollSubState currentEnrollSubState = ENROLL_INIT;
+AttendanceSubState currentAttendanceSubState = ATTENDANCE_INIT;
+
+
 
 //create a dynamic array of type Persons
 std::vector<Person> persons;
 
 
 
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP); // 3600 seconds offset for UTC+1 (Nigerian Time)
 
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
@@ -76,11 +121,9 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
       }
     }else{
         if (strcmp((char*)data, "enroll") == 0) {
-        stateEnroll = true;
-        stateAttendance = false;
+        currentMainState = ENROLL;
       } else if (strcmp((char*)data, "attendance") == 0) {
-        stateEnroll = false;
-        stateAttendance = true;
+        currentMainState = ATTENDANCE;
       } else if (strcmp((char*)data, "print") == 0) {
         sendPersonsDataToWeb();
       }else if (strcmp((char*)data, "wipe") == 0) { // Handle wipe message
@@ -186,26 +229,26 @@ void wipePersonsDataFromFlash() {
 
 
 
-// // Send message to web interface
-// void sendWebMessage(String message) {
-//     DynamicJsonDocument doc(256);
-//     doc["type"] = "message";
-//     doc["message"] = message;
-//     String jsonString;
-//     serializeJson(doc, jsonString);
-//     ws.textAll(jsonString);
-// }
-
-
 void sendWebMessage(const String& message) {
   DynamicJsonDocument doc(256);
   doc["type"] = "message";
   doc["message"] = message;
   String jsonString;
   serializeJson(doc, jsonString);
-  ws.textAll(jsonString);
+  // ws.textAll(jsonString);
+    // Check if the new message is different from the last sent message
+  if (jsonString != lastSentMessage) {
+    ws.textAll(jsonString);
+    lastSentMessage = jsonString;  // Update the last sent message
+  }
 }
 
+
+// IPAddress local_IP(192, 168, 101, 50);  // Define your desired static IP address
+// IPAddress gateway(192, 168, 1, 1);     // Define the gateway (usually your router's IP)
+// IPAddress subnet(255, 255, 255, 0);    // Define the subnet mask
+// IPAddress primaryDNS(8, 8, 8, 8);      // Optional: Define the primary DNS server
+// IPAddress secondaryDNS(8, 8, 4, 4);    // Optional: Define the secondary DNS server
 
 
 void setup() {
@@ -214,8 +257,16 @@ void setup() {
   Serial.begin(9600);
   Serial.print("Connecting to ");
   Serial.println(ssid);
-  
-  // Connect to Wi-Fi
+  pinMode(led_success, OUTPUT);
+  //set led pins low
+  digitalWrite(led_success,LOW);
+
+  //   // Set up the static IP address
+  // if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
+  //   Serial.println("STA Failed to configure");
+  // }
+
+   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   
   while (WiFi.status() != WL_CONNECTED) {
@@ -227,6 +278,7 @@ void setup() {
   Serial.println("Connected..!");
   Serial.print("Got IP: ");  Serial.println(WiFi.localIP());
 
+
   ws.onEvent(eventHandler);
   server.addHandler(&ws);
 
@@ -235,6 +287,9 @@ void setup() {
       return;
   }
   Serial.println("LittleFS mounted successfully");
+
+  timeClient.begin();
+  timeClient.setTimeOffset(3600);
 
   SPI.begin(); // SPI bus
   rfid.PCD_Init(); // MFRC522
@@ -255,7 +310,11 @@ void setup() {
   }
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-  request->send(LittleFS, "/index.html", "text/html");
+  request->send(LittleFS, "/enroll.html", "text/html");
+  });
+  
+  server.on("/attendance", HTTP_GET, [](AsyncWebServerRequest *request){
+  request->send(LittleFS, "/attendance.html", "text/html");
   });
 
   currentCourse = "";
@@ -270,42 +329,102 @@ void setup() {
 void loop() {
   ws.cleanupClients();
   // put your main code here, to run repeatedly:
-  if (stateEnroll && currentName!="") {
-    rfid_fingerprint();
-  } else if (stateAttendance && currentCourse!="") {
-    attendance_rfid_fingerprint();
-  } 
-}
+
+ switch (currentMainState) {
+    case IDLE:
+      //Do nothing
+      break;
+
+    case ENROLL:
+      switch (currentEnrollSubState){
+
+        case ENROLL_INIT:
+          if (currentName != "") {
+            currentEnrollSubState =  ENROLL_WAITING_RFID;
+          }
+          break;
+          
+          case ENROLL_WAITING_RFID:
+            
+            if (getID()) {
+              currentEnrollSubState = ENROLL_WAITING_FINGERPRINT;
+            }
+            break;
+
+          case ENROLL_WAITING_FINGERPRINT:
+           
+            if (getFingerprintEnroll()) {
+                currentEnrollSubState = ENROLL_PROCESSING;
+            }
+            break;
+          
+          case ENROLL_PROCESSING:
+            Person p = {currentName, "", tagID, id, 0};
+            persons.push_back(p);
+            printPersonsData();
+            currentName = "";
+            savePersonsDataToFlash();
+            currentEnrollSubState = ENROLL_INIT;
+            currentMainState = IDLE;
+            break;
+        }
+      
+      break;
 
 
+    case ATTENDANCE:
+      switch(currentAttendanceSubState){
+        
+        case ATTENDANCE_INIT:
+          if (currentCourse != "") {
+            currentAttendanceSubState = ATTENDANCE_WAITING_RFID;
+          }
+          break;
 
-void rfid_fingerprint(){
-  if (getID()){
-    while (!getFingerprintEnroll())
-      ; 
-    Person p = {currentName, "", tagID, id, 0};
-    persons.push_back(p);
-    printPersonsData();
-    currentName = "";
-    stateEnroll = false;
-    savePersonsDataToFlash();
+        case ATTENDANCE_WAITING_RFID:
+          
+          if(checkID()){
+            currentAttendanceSubState = ATTENDANCE_WAITING_FINGERPRINT;
+            }
+          break;
+
+        case ATTENDANCE_WAITING_FINGERPRINT:
+          
+          if (checkFingerprintID()) {
+              currentAttendanceSubState = ATTENDANCE_PROCESSING;
+            }
+          break;
+        
+        case ATTENDANCE_PROCESSING:
+          updateParticularPersonData(tagCheck, fingerIDCheck);
+          printParticularPersonData(tagCheck, fingerIDCheck);
+          sendWebMessage("Attendance taken successfully");
+          sendPersonsDataToWeb();
+          currentMainState = IDLE;
+          currentAttendanceSubState = ATTENDANCE_INIT;
+          delay(1000);
+          digitalWrite(led_success, LOW);
+          break;
+        }
+      break;
+
   }
 }
 
 
-void attendance_rfid_fingerprint(){
-    if (checkID()){
-      while (!checkFingerprintID())
-        ; 
-      updateParticularPersonData(tagCheck, fingerIDCheck);
-      printParticularPersonData(tagCheck, fingerIDCheck);
-      ws.cleanupClients();
-      sendWebMessage("Found Match");
-      sendPersonsDataToWeb();
-      // Reset the states after processing
-      stateAttendance = false;
-  }
+
+
+void getCurrentTime() {
+  timeClient.update();
+  // while(!timeClient.update()) {
+  //   timeClient.forceUpdate();
+  // }
+
+  timeStamp = timeClient.getFormattedTime();
+
 }
+
+
 
 
 
@@ -377,11 +496,9 @@ uint8_t readnumber(void)
 
 boolean getID() 
 {
-  ws.cleanupClients();
-  delay(500);
   // Getting ready for Reading PICCs
   if (!rfid.PICC_IsNewCardPresent()) { //If a new PICC placed to RFID reader continue
-    sendWebMessage("Scan RFID");
+    sendWebMessage("Please Scan RFID tag");
     return false;
   }
   if (!rfid.PICC_ReadCardSerial()) { //Since a PICC placed get Serial and continue
@@ -408,11 +525,9 @@ boolean getID()
 
 
 boolean checkID(){
-  ws.cleanupClients();
-  delay(500);
     // Getting ready for Reading PICCs
   if (!rfid.PICC_IsNewCardPresent()) { //If a new PICC placed to RFID reader continue
-   sendWebMessage("Scan RFID");
+    sendWebMessage("Please Scan RFID tag");
     return false;
   }
   if (!rfid.PICC_ReadCardSerial()) { //Since a PICC placed get Serial and continue
@@ -441,10 +556,8 @@ boolean checkID(){
 
 uint8_t getFingerprintEnroll()
 {
-  ws.cleanupClients();
   delay(1000);
   Serial.println("Ready to enroll a fingerprint!");
-  sendWebMessage("Ready to enroll fingerprint");
   Serial.println("Please type in the ID # (from 1 to 127) you want to save this finger as...");
   id = fingerprint_store;
   fingerprint_store = 0;
@@ -454,6 +567,8 @@ uint8_t getFingerprintEnroll()
     sendWebMessage("ID not allowed or already taken");
     return false;
   }
+
+  sendWebMessage("Please place your finger on the sensor");
   Serial.print("Enrolling ID #");
   Serial.println(id);
 
@@ -640,11 +755,7 @@ uint8_t getFingerprintEnroll()
 
 uint8_t checkFingerprintID()
 {
-  // unsigned long startTime = millis();
-  // const unsigned long timeout = 2000; // 5 seconds timeout
-  // if (millis() - startTime < timeout){
-  sendWebMessage("fingerprint");
-  // }
+  sendWebMessage("Please place your finger on the sensor");
   uint8_t p = finger.getImage();
   if (p != FINGERPRINT_OK)
     return false;
@@ -665,7 +776,8 @@ uint8_t checkFingerprintID()
   fingerIDCheck = finger.fingerID;
   if (fingerIDCheck != -1) {
     Serial.print("Found fingerprint with ID #");
-    // sendWebMessage("Found Match");
+    sendWebMessage("Found A Match");
+    digitalWrite(led_success, HIGH);
     return true;
   }
   //delay(50);
@@ -696,6 +808,9 @@ void updateParticularPersonData(const String& uid, int fingerprint) {
         if (person.uid == uid && person.fingerprint == fingerprint) {
             person.attendance = 1;
             person.course = currentCourse;
+            person.status = "MARK";
+            getCurrentTime();
+            person.time = timeStamp;
             return;  // Exit the function after printing
         }
     }
@@ -727,7 +842,9 @@ void sendPersonsDataToWeb() {
       jsonData += "\"course\":\"" + person.course + "\",";
       jsonData += "\"name\":\"" + person.name + "\",";
       jsonData += "\"uid\":\"" + person.uid + "\",";
-      jsonData += "\"fingerprint\":\"" + String(person.fingerprint) + "\"";
+      jsonData += "\"fingerprint\":\"" + String(person.fingerprint) + "\",";
+      jsonData += "\"time\":\"" + person.time + "\",";
+      jsonData += "\"status\":\"" + person.status + "\"";
       jsonData += "}";
       firstEntry = false;
     }

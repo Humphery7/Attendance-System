@@ -21,8 +21,8 @@ uint8_t getFingerprintID();
 
 // byte readCard[4];
 // Replace with your network credentials
-const char* ssid = "Umidigi A3_Pro";//"Feys' Samsung Galaxy"; //"////;//"DESKTOP-AO4A53G 9889";
-const char* password = "maxkkott2018";//"123456789";// //"83s9$60Z";
+const char* ssid = "Feys' Samsung Galaxy";//"Feys' Samsung Galaxy"; //"////;//"DESKTOP-AO4A53G 9889";
+const char* password = "123456789";//"123456789";// //"83s9$60Z";
 
 String currentCourse = "";
 String currentName = "";
